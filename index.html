@@ -4,9 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZİRVƏ — Şifrə bərpası</title>
+  <title>ZİRVƏ — Hesab təsdiqi</title>
+
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -18,6 +20,7 @@
       color: #fff;
       font-family: Arial, sans-serif;
     }
+
     .panel {
       width: 100%;
       max-width: 420px;
@@ -27,17 +30,21 @@
       background: #111a30;
       box-shadow: 0 15px 50px #0008;
     }
+
     h1 {
       text-align: center;
       color: #65c8ff;
       letter-spacing: 3px;
     }
+
     h2 { text-align: center; }
+
     p {
       color: #b8c5dc;
       text-align: center;
       line-height: 1.5;
     }
+
     input, button {
       width: 100%;
       padding: 14px;
@@ -45,12 +52,14 @@
       border-radius: 9px;
       font-size: 16px;
     }
+
     input {
       color: white;
       background: #080f20;
       border: 1px solid #35476b;
       outline: none;
     }
+
     button {
       border: 0;
       background: #168bd1;
@@ -58,20 +67,36 @@
       font-weight: bold;
       cursor: pointer;
     }
+
     button:disabled { opacity: .5; }
+
     #resetForm { display: none; }
+
     #status {
       margin-top: 18px;
       font-size: 14px;
       overflow-wrap: anywhere;
     }
+
+    .success {
+      color: #73e6a3 !important;
+    }
+
+    .error {
+      color: #ff8585 !important;
+    }
   </style>
 </head>
+
 <body>
   <main class="panel">
     <h1>ZİRVƏ</h1>
-    <h2>Yeni şifrə yarat</h2>
-    <p>Hesabını qorumaq üçün yeni şifrə seç.</p>
+
+    <h2 id="pageTitle">Hesab yoxlanılır</h2>
+
+    <p id="description">
+      Zəhmət olmasa gözlə...
+    </p>
 
     <form id="resetForm">
       <input
@@ -82,6 +107,7 @@
         autocomplete="new-password"
         required
       >
+
       <input
         id="confirmPassword"
         type="password"
@@ -90,10 +116,13 @@
         autocomplete="new-password"
         required
       >
-      <button id="saveButton" type="submit">Şifrəni yenilə</button>
+
+      <button id="saveButton" type="submit">
+        Şifrəni yenilə
+      </button>
     </form>
 
-    <p id="status">Bərpa linki yoxlanılır...</p>
+    <p id="status">Link yoxlanılır...</p>
   </main>
 
   <script type="module">
@@ -122,71 +151,134 @@
     const form = document.getElementById("resetForm");
     const statusText = document.getElementById("status");
     const saveButton = document.getElementById("saveButton");
+    const pageTitle = document.getElementById("pageTitle");
+    const description = document.getElementById("description");
 
     let recoveryReady = false;
     let checking = true;
 
-    function showMessage(message, error = false) {
-      statusText.textContent = message;
-      statusText.style.color = error ? "#ff8585" : "#73e6a3";
-    }
+    const params = new URLSearchParams(
+      window.location.search
+    );
 
-    function showForm() {
-      recoveryReady = true;
-      checking = false;
-      form.style.display = "block";
-      showMessage("Bərpa linki təsdiqləndi. Yeni şifrəni daxil et.");
-    }
-
-    const params = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(
       window.location.hash.replace(/^#/, "")
     );
 
+    const linkType =
+      hashParams.get("type") ||
+      params.get("type") ||
+      "";
+
     const urlError =
       params.get("error_description") ||
       hashParams.get("error_description") ||
-      params.get("error");
+      params.get("error") ||
+      hashParams.get("error");
+
+    function showMessage(message, error = false) {
+      statusText.textContent = message;
+      statusText.className = error ? "error" : "success";
+    }
+
+    function showSignupSuccess() {
+      checking = false;
+      recoveryReady = false;
+
+      form.style.display = "none";
+
+      pageTitle.textContent = "Email təsdiqləndi!";
+      description.textContent =
+        "ZİRVƏ hesabın uğurla təsdiqləndi.";
+
+      showMessage(
+        "Təşəkkürlər! İndi Godot proqramına qayıdıb email və şifrənlə daxil ola bilərsən."
+      );
+    }
+
+    function showRecoveryForm() {
+      if (recoveryReady) return;
+
+      checking = false;
+      recoveryReady = true;
+
+      pageTitle.textContent = "Yeni şifrə yarat";
+
+      description.textContent =
+        "Hesabını qorumaq üçün yeni şifrə seç.";
+
+      form.style.display = "block";
+
+      showMessage(
+        "Bərpa linki təsdiqləndi. Yeni şifrəni daxil et."
+      );
+    }
+
+    function showLinkError(message) {
+      checking = false;
+      recoveryReady = false;
+
+      form.style.display = "none";
+
+      pageTitle.textContent = "Link etibarsızdır";
+
+      description.textContent =
+        "Linkin vaxtı bitmiş və ya istifadə edilmiş ola bilər.";
+
+      showMessage(message, true);
+    }
 
     if (urlError) {
-      checking = false;
-      showMessage(
-        "Bərpa linkində xəta var və ya linkin vaxtı bitib. Godot proqramından yeni link istə.",
-        true
+      showLinkError(
+        "Linkdə xəta var və ya onun vaxtı bitib. Godot proqramından yeni link istə."
       );
-    } else {
+    } else if (linkType === "signup") {
+      // Qeydiyyat emailinin təsdiqi
+      showSignupSuccess();
+    } else if (linkType === "recovery") {
+      // Şifrə bərpası
       client.auth.onAuthStateChange((event, session) => {
         if (
-          event === "PASSWORD_RECOVERY" &&
-          session
-        ) {
-          showForm();
-        } else if (
-          event === "INITIAL_SESSION" &&
           session &&
-          hashParams.get("type") === "recovery"
+          (
+            event === "PASSWORD_RECOVERY" ||
+            event === "INITIAL_SESSION"
+          )
         ) {
-          showForm();
+          showRecoveryForm();
         }
       });
 
       setTimeout(async () => {
-        if (recoveryReady || !checking) return;
+        if (!checking || recoveryReady) return;
 
-        const { data, error } = await client.auth.getSession();
+        const { data, error } =
+          await client.auth.getSession();
 
-        if (data.session && hashParams.get("type") === "recovery") {
-          showForm();
+        if (
+          !error &&
+          data.session &&
+          linkType === "recovery"
+        ) {
+          showRecoveryForm();
         } else if (!recoveryReady) {
-          checking = false;
-          showMessage(
-            error
-              ? "Sessiyanı yoxlamaq mümkün olmadı. Yeni bərpa linki istə."
-              : "Bərpa linki etibarsızdır və ya vaxtı bitib. Godot proqramından yeni link istə.",
-            true
+          showLinkError(
+            "Bərpa linki etibarsızdır və ya vaxtı bitib. Godot proqramından yeni link istə."
           );
         }
-      }, 8000);
+      }, 6000);
+    } else {
+      checking = false;
+
+      pageTitle.textContent = "ZİRVƏ";
+
+      description.textContent =
+        "Bu səhifə email təsdiqi və şifrə bərpası üçündür.";
+
+      showMessage(
+        "Düzgün təsdiq və ya bərpa linkindən istifadə et.",
+        true
+      );
     }
 
     form.addEventListener("submit", async (event) => {
@@ -201,12 +293,18 @@
         document.getElementById("confirmPassword").value;
 
       if (password.length < 8) {
-        showMessage("Şifrə ən azı 8 simvol olmalıdır.", true);
+        showMessage(
+          "Şifrə ən azı 8 simvol olmalıdır.",
+          true
+        );
         return;
       }
 
       if (password !== confirmation) {
-        showMessage("Şifrələr eyni deyil.", true);
+        showMessage(
+          "Şifrələr eyni deyil.",
+          true
+        );
         return;
       }
 
@@ -218,15 +316,26 @@
       });
 
       if (error) {
-        showMessage("Xəta: " + error.message, true);
+        showMessage(
+          "Xəta: " + error.message,
+          true
+        );
+
         saveButton.disabled = false;
         saveButton.textContent = "Şifrəni yenilə";
         return;
       }
 
       form.style.display = "none";
+      recoveryReady = false;
+
+      pageTitle.textContent = "Şifrə yeniləndi!";
+
+      description.textContent =
+        "ZİRVƏ hesabının yeni şifrəsi hazırdır.";
+
       showMessage(
-        "Şifrən uğurla yeniləndi! İndi ZİRVƏ proqramına yeni şifrə ilə daxil ola bilərsən."
+        "Şifrən uğurla yeniləndi! İndi Godot proqramına yeni şifrə ilə daxil ola bilərsən."
       );
     });
   </script>
