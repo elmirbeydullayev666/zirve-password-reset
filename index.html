@@ -1,0 +1,139 @@
+
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZİRVƏ — Yeni şifrə yarat</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;display:flex;align-items:center;
+ justify-content:center;background:#080d1b;color:white;
+ font-family:Arial,sans-serif;padding:20px
+}
+.card{
+ width:100%;max-width:420px;padding:32px;
+ background:#121d35;border:1px solid #263d65;
+ border-radius:20px;box-shadow:0 15px 50px #0008
+}
+h1{color:#55c8ff;text-align:center;font-size:28px}
+p{color:#b9c8df;line-height:1.5;text-align:center}
+input,button{
+ width:100%;padding:15px;margin-top:14px;
+ border-radius:10px;font-size:16px
+}
+input{background:#091326;border:1px solid #385276;color:white}
+button{
+ background:#168ee8;color:white;border:0;
+ font-weight:bold;cursor:pointer
+}
+button:disabled{opacity:.5}
+#status{font-size:14px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>✳ ZİRVƏ</h1>
+<p>Yeni şifrə yarat</p>
+<p>Hesabını qorumaq üçün ən azı 8 simvolluq yeni şifrə seç.</p>
+
+<form id="resetForm" hidden>
+<input id="password" type="password" minlength="8"
+ placeholder="Yeni şifrə" required>
+<input id="confirm" type="password" minlength="8"
+ placeholder="Yeni şifrəni təkrar yaz" required>
+<button id="submitBtn" type="submit">Şifrəni yenilə</button>
+</form>
+
+<p id="status">Bərpa linki yoxlanılır...</p>
+</div>
+
+<script>
+const SUPABASE_URL = "https://rpynobmekvscagjyvphz.supabase.co";
+const SUPABASE_KEY = "BURAYA_PUBLISHABLE_KEY_YAZ";
+
+const client = window.supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_KEY,
+ {
+  auth:{
+   detectSessionInUrl:true,
+   persistSession:true,
+   autoRefreshToken:true
+  }
+ }
+);
+
+const form = document.getElementById("resetForm");
+const statusText = document.getElementById("status");
+const button = document.getElementById("submitBtn");
+
+let recoveryReady = false;
+
+client.auth.onAuthStateChange((event, session) => {
+ if(event === "PASSWORD_RECOVERY" && session){
+  recoveryReady = true;
+  form.hidden = false;
+  statusText.textContent = "Yeni şifrənizi daxil edin.";
+ }
+});
+
+async function checkSession(){
+ const {data,error} = await client.auth.getSession();
+
+ if(error){
+  statusText.textContent = "Bərpa linkini yoxlamaq mümkün olmadı. Yeni link istəyin.";
+  return;
+ }
+
+ if(data.session){
+  recoveryReady = true;
+  form.hidden = false;
+  statusText.textContent = "Yeni şifrənizi daxil edin.";
+ }else{
+  statusText.textContent = "Bərpa linki etibarsızdır və ya vaxtı bitib. Tətbiqdən yeni link istəyin.";
+ }
+}
+
+form.addEventListener("submit",async function(e){
+ e.preventDefault();
+
+ const password = document.getElementById("password").value;
+ const confirm = document.getElementById("confirm").value;
+
+ if(!recoveryReady){
+  statusText.textContent = "Bərpa sessiyası tapılmadı. Yeni link istəyin.";
+  return;
+ }
+
+ if(password.length < 8){
+  statusText.textContent = "Şifrə ən azı 8 simvol olmalıdır.";
+  return;
+ }
+
+ if(password !== confirm){
+  statusText.textContent = "Şifrələr eyni deyil.";
+  return;
+ }
+
+ button.disabled = true;
+ statusText.textContent = "Şifrə yenilənir...";
+
+ const {error} = await client.auth.updateUser({password});
+
+ if(error){
+  statusText.textContent = "Xəta: " + error.message;
+  button.disabled = false;
+  return;
+ }
+
+ statusText.textContent = "Şifrən uğurla yeniləndi. İndi Zirvə tətbiqinə daxil ola bilərsən.";
+ form.hidden = true;
+});
+
+checkSession();
+</script>
+</body>
+</html>
