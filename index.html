@@ -1,343 +1,50 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="az">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZİRVƏ — Hesab təsdiqi</title>
-
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: #080d1c;
-      color: #fff;
-      font-family: Arial, sans-serif;
-    }
-
-    .panel {
-      width: 100%;
-      max-width: 420px;
-      padding: 32px 25px;
-      border: 1px solid #26375b;
-      border-radius: 18px;
-      background: #111a30;
-      box-shadow: 0 15px 50px #0008;
-    }
-
-    h1 {
-      text-align: center;
-      color: #65c8ff;
-      letter-spacing: 3px;
-    }
-
-    h2 { text-align: center; }
-
-    p {
-      color: #b8c5dc;
-      text-align: center;
-      line-height: 1.5;
-    }
-
-    input, button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 14px;
-      border-radius: 9px;
-      font-size: 16px;
-    }
-
-    input {
-      color: white;
-      background: #080f20;
-      border: 1px solid #35476b;
-      outline: none;
-    }
-
-    button {
-      border: 0;
-      background: #168bd1;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    button:disabled { opacity: .5; }
-
-    #resetForm { display: none; }
-
-    #status {
-      margin-top: 18px;
-      font-size: 14px;
-      overflow-wrap: anywhere;
-    }
-
-    .success {
-      color: #73e6a3 !important;
-    }
-
-    .error {
-      color: #ff8585 !important;
-    }
-  </style>
-</head>
-
-<body>
-  <main class="panel">
-    <h1>ZİRVƏ</h1>
-
-    <h2 id="pageTitle">Hesab yoxlanılır</h2>
-
-    <p id="description">
-      Zəhmət olmasa gözlə...
-    </p>
-
-    <form id="resetForm">
-      <input
-        id="password"
-        type="password"
-        placeholder="Yeni şifrə"
-        minlength="8"
-        autocomplete="new-password"
-        required
-      >
-
-      <input
-        id="confirmPassword"
-        type="password"
-        placeholder="Yeni şifrəni təkrar yaz"
-        minlength="8"
-        autocomplete="new-password"
-        required
-      >
-
-      <button id="saveButton" type="submit">
-        Şifrəni yenilə
-      </button>
-    </form>
-
-    <p id="status">Link yoxlanılır...</p>
-  </main>
-
-  <script type="module">
-    import { createClient } from
-      "https://esm.sh/@supabase/supabase-js@2";
-
-    const SUPABASE_URL =
-      "https://rpynobmekvscagjyvphz.supabase.co";
-
-    const SUPABASE_KEY =
-      "sb_publishable_y7bGCadzVAJSYxM5VQZPoA_c_xz9-gZ";
-
-    const client = createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY,
-      {
-        auth: {
-          detectSessionInUrl: true,
-          persistSession: true,
-          autoRefreshToken: true,
-          flowType: "implicit"
-        }
-      }
-    );
-
-    const form = document.getElementById("resetForm");
-    const statusText = document.getElementById("status");
-    const saveButton = document.getElementById("saveButton");
-    const pageTitle = document.getElementById("pageTitle");
-    const description = document.getElementById("description");
-
-    let recoveryReady = false;
-    let checking = true;
-
-    const params = new URLSearchParams(
-      window.location.search
-    );
-
-    const hashParams = new URLSearchParams(
-      window.location.hash.replace(/^#/, "")
-    );
-
-    const linkType =
-      hashParams.get("type") ||
-      params.get("type") ||
-      "";
-
-    const urlError =
-      params.get("error_description") ||
-      hashParams.get("error_description") ||
-      params.get("error") ||
-      hashParams.get("error");
-
-    function showMessage(message, error = false) {
-      statusText.textContent = message;
-      statusText.className = error ? "error" : "success";
-    }
-
-    function showSignupSuccess() {
-      checking = false;
-      recoveryReady = false;
-
-      form.style.display = "none";
-
-      pageTitle.textContent = "Email təsdiqləndi!";
-      description.textContent =
-        "ZİRVƏ hesabın uğurla təsdiqləndi.";
-
-      showMessage(
-        "Təşəkkürlər! İndi Godot proqramına qayıdıb email və şifrənlə daxil ola bilərsən."
-      );
-    }
-
-    function showRecoveryForm() {
-      if (recoveryReady) return;
-
-      checking = false;
-      recoveryReady = true;
-
-      pageTitle.textContent = "Yeni şifrə yarat";
-
-      description.textContent =
-        "Hesabını qorumaq üçün yeni şifrə seç.";
-
-      form.style.display = "block";
-
-      showMessage(
-        "Bərpa linki təsdiqləndi. Yeni şifrəni daxil et."
-      );
-    }
-
-    function showLinkError(message) {
-      checking = false;
-      recoveryReady = false;
-
-      form.style.display = "none";
-
-      pageTitle.textContent = "Link etibarsızdır";
-
-      description.textContent =
-        "Linkin vaxtı bitmiş və ya istifadə edilmiş ola bilər.";
-
-      showMessage(message, true);
-    }
-
-    if (urlError) {
-      showLinkError(
-        "Linkdə xəta var və ya onun vaxtı bitib. Godot proqramından yeni link istə."
-      );
-    } else if (linkType === "signup") {
-      // Qeydiyyat emailinin təsdiqi
-      showSignupSuccess();
-    } else if (linkType === "recovery") {
-      // Şifrə bərpası
-      client.auth.onAuthStateChange((event, session) => {
-        if (
-          session &&
-          (
-            event === "PASSWORD_RECOVERY" ||
-            event === "INITIAL_SESSION"
-          )
-        ) {
-          showRecoveryForm();
-        }
-      });
-
-      setTimeout(async () => {
-        if (!checking || recoveryReady) return;
-
-        const { data, error } =
-          await client.auth.getSession();
-
-        if (
-          !error &&
-          data.session &&
-          linkType === "recovery"
-        ) {
-          showRecoveryForm();
-        } else if (!recoveryReady) {
-          showLinkError(
-            "Bərpa linki etibarsızdır və ya vaxtı bitib. Godot proqramından yeni link istə."
-          );
-        }
-      }, 6000);
-    } else {
-      checking = false;
-
-      pageTitle.textContent = "ZİRVƏ";
-
-      description.textContent =
-        "Bu səhifə email təsdiqi və şifrə bərpası üçündür.";
-
-      showMessage(
-        "Düzgün təsdiq və ya bərpa linkindən istifadə et.",
-        true
-      );
-    }
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      if (!recoveryReady) return;
-
-      const password =
-        document.getElementById("password").value;
-
-      const confirmation =
-        document.getElementById("confirmPassword").value;
-
-      if (password.length < 8) {
-        showMessage(
-          "Şifrə ən azı 8 simvol olmalıdır.",
-          true
-        );
-        return;
-      }
-
-      if (password !== confirmation) {
-        showMessage(
-          "Şifrələr eyni deyil.",
-          true
-        );
-        return;
-      }
-
-      saveButton.disabled = true;
-      saveButton.textContent = "Yenilənir...";
-
-      const { error } = await client.auth.updateUser({
-        password: password
-      });
-
-      if (error) {
-        showMessage(
-          "Xəta: " + error.message,
-          true
-        );
-
-        saveButton.disabled = false;
-        saveButton.textContent = "Şifrəni yenilə";
-        return;
-      }
-
-      form.style.display = "none";
-      recoveryReady = false;
-
-      pageTitle.textContent = "Şifrə yeniləndi!";
-
-      description.textContent =
-        "ZİRVƏ hesabının yeni şifrəsi hazırdır.";
-
-      showMessage(
-        "Şifrən uğurla yeniləndi! İndi Godot proqramına yeni şifrə ilə daxil ola bilərsən."
-      );
-    });
-  </script>
-</body>
-</html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#102b25"><title>Zirvə — Şifrəni yenilə</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f7f2;color:#122b25;font:15px system-ui,sans-serif;padding:20px}.card{width:min(440px,100%);background:white;border:1px solid #e7ece7;border-radius:22px;padding:28px;box-shadow:0 20px 60px #102b2512}.brand{font-size:13px;font-weight:800;color:#167d59;letter-spacing:1px}.title{font-size:24px;margin:14px 0 5px}.hint{color:#7a8983;font-size:13px;line-height:1.5}label{display:block;font-size:12px;font-weight:700;margin:18px 0 6px}input{width:100%;padding:13px;border:1px solid #e0e8e1;border-radius:11px;font:inherit}button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:11px;background:#d5fb85;color:#17352b;font-weight:800;font-size:14px;cursor:pointer}.message{font-size:13px;color:#167d59;min-height:20px;margin-top:12px}.error{color:#b3453e}
+</style></head>
+<body><main class="card"><div class="brand">✳ ZİRVƏ</div><h1 class="title">Yeni şifrə yarat</h1><p class="hint">Hesabını qorumaq üçün ən azı 8 simvolluq yeni şifrə seç.</p><form id="form"><label for="password">Yeni şifrə</label><input id="password" type="password" minlength="8" autocomplete="new-password" required><label for="confirm">Şifrəni təkrar yaz</label><input id="confirm" type="password" minlength="8" autocomplete="new-password" required><button type="submit">Şifrəni yenilə</button></form><div id="message" class="message"></div></main>
+<script>
+// Configure these two public client values before deploying this page.
+const PROJECT_URL = "https://YOUR_PROJECT_REF.supabase.co";
+const PUBLISHABLE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY";
+const hash = new URLSearchParams(location.hash.slice(1));
+const accessToken = hash.get("access_token");
+const message = document.getElementById("message");
+if (accessToken && hash.get("type") === "signup") {
+  message.textContent = "E-poçt ünvanın təsdiqləndi. Zirvə tətbiqinə qayıdıb daxil ola bilərsən.";
+  document.getElementById("form").hidden = true;
+} else if (!accessToken || hash.get("type") !== "recovery") {
+  message.textContent = "Bərpa linki etibarsızdır və ya vaxtı bitib. Tətbiqdən yeni link istə.";
+  message.classList.add("error");
+  document.getElementById("form").hidden = true;
+}
+document.getElementById("form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const password = document.getElementById("password").value;
+  if (password !== document.getElementById("confirm").value) {
+    message.textContent = "Şifrələr uyğun gəlmir.";
+    message.classList.add("error");
+    return;
+  }
+  if (password.length < 8 || PROJECT_URL.includes("YOUR_PROJECT_REF") || PUBLISHABLE_KEY.includes("YOUR_SUPABASE_")) {
+    message.textContent = "Şifrə ən azı 8 simvol olmalı və səhifə Supabase məlumatları ilə qurulmalıdır.";
+    message.classList.add("error");
+    return;
+  }
+  const response = await fetch(PROJECT_URL + "/auth/v1/user", {
+    method: "PUT",
+    headers: { "Content-Type":"application/json", "apikey":PUBLISHABLE_KEY, "Authorization":"Bearer " + accessToken },
+    body: JSON.stringify({ password })
+  });
+  if (response.ok) {
+    message.textContent = "Şifrən yeniləndi. İndi Zirvə tətbiqinə qayıdıb daxil ola bilərsən.";
+    document.getElementById("form").hidden = true;
+  } else {
+    message.textContent = "Linkin vaxtı bitib. Tətbiqdən yeni bərpa linki istə.";
+    message.classList.add("error");
+  }
+});
+</script></body></html>
